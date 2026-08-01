@@ -1,0 +1,136 @@
+name: Build Vitão Assistente no Aparelho
+
+on:
+  push:
+    branches: [chat-autonomo-no-aparelho]
+    paths:
+      - 'ondevice/**'
+      - '.github/workflows/build-ondevice-assistant.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ondevice/**'
+      - '.github/workflows/build-ondevice-assistant.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    steps:
+      - name: Baixar arquivos do projeto
+        uses: actions/checkout@v4
+
+      - name: Baixar llama.cpp oficial
+        uses: actions/checkout@v4
+        with:
+          repository: ggml-org/llama.cpp
+          ref: a7a6d0d269c896218b6c78e0933bd6a17519d3f6
+          path: llama.cpp
+          submodules: recursive
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar cache Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Instalar Android SDK, NDK e CMake
+        shell: bash
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;29.0.13113456" \
+            "cmake;3.31.6"
+
+      - name: Aplicar interface do Vitão Assistente
+        shell: bash
+        run: |
+          APP_DIR="$GITHUB_WORKSPACE/llama.cpp/examples/llama.android/app"
+          cp -R "$GITHUB_WORKSPACE/ondevice/app/." "$APP_DIR/"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('llama.cpp/examples/llama.android')
+          app = root / 'app/build.gradle.kts'
+          text = app.read_text()
+          text = text.replace('applicationId = "com.example.llama.aichat"', 'applicationId = "com.vitao.assistentelocal.ondevice"')
+          text = text.replace('minSdk = 33', 'minSdk = 30')
+          text = text.replace('versionCode = 1', 'versionCode = 2')
+          text = text.replace('versionName = "1.0"', 'versionName = "2.0"')
+          text = text.replace('isMinifyEnabled = true\n            isShrinkResources = true', 'isMinifyEnabled = false\n            isShrinkResources = false', 1)
+          app.write_text(text)
+
+          lib = root / 'lib/build.gradle.kts'
+          text = lib.read_text()
+          text = text.replace('minSdk = 33', 'minSdk = 30')
+          text = text.replace('abiFilters += listOf("arm64-v8a", "x86_64")', 'abiFilters += listOf("arm64-v8a")')
+          lib.write_text(text)
+
+          main_activity = root / 'app/src/main/java/com/example/llama/MainActivity.kt'
+          text = main_activity.read_text()
+          text = text.replace(
+              'private fun validateGguf(file: File)',
+              'private suspend fun validateGguf(file: File)'
+          )
+          text = text.replace('        engine?.destroy()\n', '')
+          main_activity.write_text(text)
+
+          adapter = root / 'app/src/main/java/com/example/llama/MessageAdapter.kt'
+          text = adapter.read_text()
+          text = text.replace(
+              'lineSpacingExtra = dp(2).toFloat()',
+              'setLineSpacing(dp(2).toFloat(), 1.0f)'
+          )
+          adapter.write_text(text)
+          PY
+
+      - name: Compilar APK arm64
+        id: gradle_build
+        continue-on-error: true
+        working-directory: llama.cpp/examples/llama.android
+        shell: bash
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
+
+      - name: Publicar log da compilação
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vitao-Assistente-Log
+          path: build.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Interromper se a compilação falhou
+        if: steps.gradle_build.outcome != 'success'
+        shell: bash
+        run: exit 1
+
+      - name: Preparar arquivos finais
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp llama.cpp/examples/llama.android/app/build/outputs/apk/debug/app-debug.apk dist/Vitao-Assistente-No-Aparelho.apk
+          cd llama.cpp/examples/llama.android
+          zip -qr "$GITHUB_WORKSPACE/dist/Vitao-Assistente-No-Aparelho-Fonte.zip" app lib build.gradle.kts settings.gradle.kts gradle gradlew gradlew.bat
+          cd "$GITHUB_WORKSPACE"
+          sha256sum dist/Vitao-Assistente-No-Aparelho.apk > dist/SHA256.txt
+
+      - name: Publicar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vitao-Assistente-No-Aparelho
+          path: dist/*
+          retention-days: 30
+          compression-level: 0

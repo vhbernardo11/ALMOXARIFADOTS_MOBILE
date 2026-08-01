@@ -1,0 +1,115 @@
+PEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("image/*");
+                startActivityForResult(intent, REQ_IMAGE);
+            });
+        }
+
+        @JavascriptInterface
+        public void importBackup() {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/json");
+                startActivityForResult(intent, REQ_IMPORT);
+            });
+        }
+
+        @JavascriptInterface
+        public void exportBackup(String fileName, String content) {
+            pendingExportContent = content == null ? "" : content;
+            runOnUiThread(() -> {
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/json");
+                intent.putExtra(Intent.EXTRA_TITLE, (fileName == null || fileName.trim().isEmpty()) ? "vitao-assistente-backup.json" : fileName);
+                startActivityForResult(intent, REQ_EXPORT);
+            });
+        }
+
+        @JavascriptInterface
+        public void toast(String message) {
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+        }
+    }
+
+    private String friendlyError(Exception error) {
+        String message = error.getMessage();
+        if (message == null || message.trim().isEmpty()) message = error.getClass().getSimpleName();
+        String lower = message.toLowerCase(Locale.ROOT);
+        if (lower.contains("failed to connect") || lower.contains("connection refused")) {
+            return "Não consegui alcançar o Ollama. Confira o endereço, a mesma rede Wi‑Fi e o firewall do computador.";
+        }
+        if (lower.contains("timeout")) {
+            return "O servidor demorou demais para responder. Confira a rede e se o modelo terminou de carregar.";
+        }
+        return message;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK || data == null) {
+            if (requestCode == REQ_EXPORT) pendingExportContent = "";
+            return;
+        }
+
+        try {
+            if (requestCode == REQ_VOICE) {
+                ArrayList<String> matches = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                if (matches != null && !matches.isEmpty()) callback("voice", matches.get(0));
+                return;
+            }
+
+            Uri uri = data.getData();
+            if (uri == null) return;
+
+            if (requestCode == REQ_IMAGE) {
+                String mime = getContentResolver().getType(uri);
+                byte[] bytes = readLimited(getContentResolver().openInputStream(uri), MAX_IMAGE_BYTES);
+                String encoded = Base64.encodeToString(bytes, Base64.NO_WRAP);
+                callback("image", mime == null ? "image/jpeg" : mime, encoded);
+            } else if (requestCode == REQ_IMPORT) {
+                byte[] bytes = readLimited(getContentResolver().openInputStream(uri), MAX_IMPORT_BYTES);
+                callback("imported", new String(bytes, StandardCharsets.UTF_8));
+            } else if (requestCode == REQ_EXPORT) {
+                try (OutputStream output = getContentResolver().openOutputStream(uri)) {
+                    if (output == null) throw new IllegalStateException("Não foi possível criar o arquivo");
+                    output.write(pendingExportContent.getBytes(StandardCharsets.UTF_8));
+                    output.flush();
+                }
+                pendingExportContent = "";
+                callback("exported", "Backup salvo");
+            }
+        } catch (Exception error) {
+            callback("error", "file", friendlyError(error));
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView == null) {
+            super.onBackPressed();
+            return;
+        }
+        webView.evaluateJavascript("window.handleAndroidBack ? window.handleAndroidBack() : false", value -> {
+            if (!"true".equals(value)) MainActivity.super.onBackPressed();
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        for (HttpURLConnection connection : activeConnections.values()) connection.disconnect();
+        activeConnections.clear();
+        executor.shutdownNow();
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+        }
+        if (webView != null) {
+            webView.removeJavascriptInterface("VitaoNative");
+            webView.destroy();
+        }
+        super.onDestroy();
+    }
+}

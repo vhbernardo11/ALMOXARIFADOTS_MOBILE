@@ -8,5 +8,6 @@ Aplicativo Android baseado no binding oficial do `llama.cpp`.
 - Mantém conversas no armazenamento privado do aplicativo.
 - Inclui assistentes Geral, ACS, Renda Extra, Escrita e Professor.
 - Possui voz, leitura em voz alta, histórico, cópia, compartilhamento e interrupção de respostas.
+- Compilação direcionada a aparelhos Android arm64.
 
-A branch é experimental e não deve ser mesclada antes de testar o APK em um aparelho arm64.
+A branch é experimental e não deve ser mesclada antes de testar o APK no aparelho.

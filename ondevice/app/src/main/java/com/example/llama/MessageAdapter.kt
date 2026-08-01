@@ -34,7 +34,7 @@ class MessageAdapter(
             setPadding(dp(14), dp(11), dp(14), dp(11))
             maxWidth = (context.resources.displayMetrics.widthPixels * 0.84f).toInt()
             setTextIsSelectable(true)
-            lineSpacingExtra = dp(2).toFloat()
+            setLineSpacing(dp(2).toFloat(), 1.0f)
         }
         container.addView(bubble)
         return MessageHolder(container, bubble)

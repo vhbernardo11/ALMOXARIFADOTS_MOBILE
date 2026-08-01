@@ -1,0 +1,142 @@
+ecute(() -> {
+                HttpURLConnection connection = null;
+                try {
+                    String base = normalizeBaseUrl(baseUrl);
+                    connection = (HttpURLConnection) new URL(base + "/api/tags").openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.setConnectTimeout(8000);
+                    connection.setReadTimeout(15000);
+                    connection.setRequestProperty("Accept", "application/json");
+                    int code = connection.getResponseCode();
+                    String body = readStream(code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream());
+                    if (code < 200 || code >= 300) throw new IllegalStateException("Servidor respondeu " + code + ": " + body);
+                    callback("models", requestId, body);
+                } catch (Exception error) {
+                    callback("error", requestId, friendlyError(error));
+                } finally {
+                    if (connection != null) connection.disconnect();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void serverVersion(String baseUrl, String requestId) {
+            executor.execute(() -> {
+                HttpURLConnection connection = null;
+                try {
+                    String base = normalizeBaseUrl(baseUrl);
+                    connection = (HttpURLConnection) new URL(base + "/api/version").openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.setConnectTimeout(8000);
+                    connection.setReadTimeout(12000);
+                    int code = connection.getResponseCode();
+                    String body = readStream(code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream());
+                    if (code < 200 || code >= 300) throw new IllegalStateException("Servidor respondeu " + code + ": " + body);
+                    callback("serverVersion", requestId, body);
+                } catch (Exception error) {
+                    callback("error", requestId, friendlyError(error));
+                } finally {
+                    if (connection != null) connection.disconnect();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void chat(String baseUrl, String payloadJson, String requestId) {
+            executor.execute(() -> {
+                HttpURLConnection connection = null;
+                try {
+                    String base = normalizeBaseUrl(baseUrl);
+                    connection = (HttpURLConnection) new URL(base + "/api/chat").openConnection();
+                    connection.setRequestMethod("POST");
+                    connection.setDoOutput(true);
+                    connection.setConnectTimeout(12000);
+                    connection.setReadTimeout(0);
+                    connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                    connection.setRequestProperty("Accept", "application/x-ndjson, application/json");
+                    activeConnections.put(requestId, connection);
+
+                    byte[] bytes = payloadJson.getBytes(StandardCharsets.UTF_8);
+                    connection.setFixedLengthStreamingMode(bytes.length);
+                    try (OutputStream output = connection.getOutputStream()) {
+                        output.write(bytes);
+                    }
+
+                    int code = connection.getResponseCode();
+                    if (code < 200 || code >= 300) {
+                        String body = readStream(connection.getErrorStream());
+                        throw new IllegalStateException("Servidor respondeu " + code + ": " + body);
+                    }
+
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            if (Thread.currentThread().isInterrupted()) break;
+                            String trimmed = line.trim();
+                            if (!trimmed.isEmpty()) callback("chunk", requestId, trimmed);
+                        }
+                    }
+                    if (activeConnections.containsKey(requestId)) callback("done", requestId);
+                } catch (Exception error) {
+                    if (activeConnections.containsKey(requestId)) callback("error", requestId, friendlyError(error));
+                } finally {
+                    activeConnections.remove(requestId);
+                    if (connection != null) connection.disconnect();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void stop(String requestId) {
+            HttpURLConnection connection = activeConnections.remove(requestId);
+            if (connection != null) connection.disconnect();
+            callback("stopped", requestId);
+        }
+
+        @JavascriptInterface
+        public void copy(String text) {
+            runOnUiThread(() -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Resposta", text == null ? "" : text));
+                    Toast.makeText(MainActivity.this, "Copiado", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void speak(String text) {
+            runOnUiThread(() -> {
+                if (textToSpeech != null) {
+                    textToSpeech.stop();
+                    textToSpeech.speak(text == null ? "" : text, TextToSpeech.QUEUE_FLUSH, null, "vitao-answer");
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void stopSpeaking() {
+            runOnUiThread(() -> {
+                if (textToSpeech != null) textToSpeech.stop();
+            });
+        }
+
+        @JavascriptInterface
+        public void voiceInput() {
+            runOnUiThread(() -> {
+                try {
+                    Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "pt-BR");
+                    intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Fale sua mensagem");
+                    startActivityForResult(intent, REQ_VOICE);
+                } catch (Exception error) {
+                    callback("error", "voice", "Reconhecimento de voz indisponível neste aparelho");
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void pickImage() {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(Intent.ACTION_O

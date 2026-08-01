@@ -17,13 +17,55 @@ jobs:
       - name: Baixar repositório
         uses: actions/checkout@v4
 
-      - name: Reconstruir projeto
+      - name: Reconstruir projeto Android
         shell: bash
         run: |
-          cat .github/chat-autonomo/archive.part-* | tr -d '\n\r ' | base64 -d > projeto.zip
-          unzip -t projeto.zip
-          mkdir -p chat-autonomo
-          unzip -q projeto.zip -d chat-autonomo
+          set -e
+          mkdir -p chat-autonomo/app/src/main/java/com/vitao/assistentelocal
+          mkdir -p chat-autonomo/app/src/main/assets
+          mkdir -p chat-autonomo/app/src/main/res/values chat-autonomo/app/src/main/res/xml
+          cat .github/chat-autonomo/index.part-* > chat-autonomo/app/src/main/assets/index.html
+          cat .github/chat-autonomo/MainActivity.part-* > chat-autonomo/app/src/main/java/com/vitao/assistentelocal/MainActivity.java
+          cat > chat-autonomo/settings.gradle <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          rootProject.name = 'VitaoAssistenteLocal'
+          include ':app'
+          EOF
+          cat > chat-autonomo/build.gradle <<'EOF'
+          plugins { id 'com.android.application' version '8.7.3' apply false }
+          EOF
+          cat > chat-autonomo/app/build.gradle <<'EOF'
+          plugins { id 'com.android.application' }
+          android {
+            namespace 'com.vitao.assistentelocal'
+            compileSdk 35
+            defaultConfig { applicationId 'com.vitao.assistentelocal'; minSdk 23; targetSdk 35; versionCode 1; versionName '0.1.0' }
+            buildTypes { release { minifyEnabled false; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
+            compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+          }
+          EOF
+          echo '# Sem ofuscação nesta versão inicial.' > chat-autonomo/app/proguard-rules.pro
+          cat > chat-autonomo/app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.RECORD_AUDIO" />
+            <application android:allowBackup="true" android:label="Vitão Assistente" android:networkSecurityConfig="@xml/network_security_config" android:supportsRtl="true" android:theme="@style/AppTheme" android:usesCleartextTraffic="true">
+              <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|uiMode" android:exported="true" android:launchMode="singleTask">
+                <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          EOF
+          cat > chat-autonomo/app/src/main/res/values/styles.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources><style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowActionModeOverlay">true</item><item name="android:colorAccent">#D69A19</item><item name="android:navigationBarColor">#0B0D12</item><item name="android:statusBarColor">#0B0D12</item><item name="android:windowLightStatusBar">false</item></style></resources>
+          EOF
+          cat > chat-autonomo/app/src/main/res/xml/network_security_config.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config><base-config cleartextTrafficPermitted="true" /></network-security-config>
+          EOF
 
       - name: Configurar Java 17
         uses: actions/setup-java@v4
@@ -49,7 +91,7 @@ jobs:
       - name: Preparar arquivos
         run: |
           cp chat-autonomo/app/build/outputs/apk/debug/app-debug.apk Vitao-Assistente-Local.apk
-          cp projeto.zip Vitao-Assistente-Local-Fonte.zip
+          cd chat-autonomo && zip -qr ../Vitao-Assistente-Local-Fonte.zip .
 
       - name: Publicar APK e fonte
         uses: actions/upload-artifact@v4

@@ -74,6 +74,22 @@ jobs:
           text = text.replace('minSdk = 33', 'minSdk = 28')
           text = text.replace('abiFilters += listOf("arm64-v8a", "x86_64")', 'abiFilters += listOf("arm64-v8a")')
           lib.write_text(text)
+
+          main_activity = root / 'app/src/main/java/com/example/llama/MainActivity.kt'
+          text = main_activity.read_text()
+          text = text.replace(
+              'private fun validateGguf(file: File)',
+              'private suspend fun validateGguf(file: File)'
+          )
+          main_activity.write_text(text)
+
+          adapter = root / 'app/src/main/java/com/example/llama/MessageAdapter.kt'
+          text = adapter.read_text()
+          text = text.replace(
+              'lineSpacingExtra = dp(2).toFloat()',
+              'setLineSpacing(dp(2).toFloat(), 1.0f)'
+          )
+          adapter.write_text(text)
           PY
 
       - name: Compilar APK arm64

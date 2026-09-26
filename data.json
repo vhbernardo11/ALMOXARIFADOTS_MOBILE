@@ -1,0 +1,126 @@
+{
+  "updated_at": "26/09/2026",
+  "cash": {
+    "personal": 244.84,
+    "company_nubank": 194.49,
+    "company_broker": 311.36,
+    "company_total": 505.85,
+    "nubank_total": 439.33,
+    "total": 750.69
+  },
+  "tax": {
+    "fiscal_result": -30,
+    "irrf_credit": 8.23,
+    "ir_due": 0,
+    "darf": 0,
+    "status": "Em apuração até o fechamento de setembro"
+  },
+  "personal_movements": [
+    {
+      "date": "25/09",
+      "description": "Jucelen",
+      "amount": -17.75,
+      "balance_after": 398.76
+    },
+    {
+      "date": "25/09",
+      "description": "Supermercado",
+      "amount": -93.8,
+      "balance_after": 304.96
+    },
+    {
+      "date": "25/09",
+      "description": "Farmácia",
+      "amount": -25.42,
+      "balance_after": 279.54
+    },
+    {
+      "date": "26/09",
+      "description": "Farmácia",
+      "amount": -19.7,
+      "balance_after": 259.84
+    },
+    {
+      "date": "26/09",
+      "description": "Jucelen",
+      "amount": -15,
+      "balance_after": 244.84
+    }
+  ],
+  "trading": {
+    "accumulated_net": -38.23,
+    "total_gross": 244,
+    "total_costs_irrf": 282.23,
+    "last_day": {
+      "date": "25/09",
+      "gross": 144,
+      "costs_irrf": 3.42,
+      "net": 140.58
+    },
+    "days": [
+      {
+        "date": "15/09",
+        "gross": -399,
+        "costs_irrf": 34,
+        "net": -433,
+        "acc": -433
+      },
+      {
+        "date": "16/09",
+        "gross": -163,
+        "costs_irrf": 20.5,
+        "net": -183.5,
+        "acc": -616.5
+      },
+      {
+        "date": "17/09",
+        "gross": 207,
+        "costs_irrf": 9,
+        "net": 198,
+        "acc": -418.5
+      },
+      {
+        "date": "18/09",
+        "gross": 114,
+        "costs_irrf": 2.13,
+        "net": 111.87,
+        "acc": -306.63
+      },
+      {
+        "date": "21/09",
+        "gross": 26,
+        "costs_irrf": 38.5,
+        "net": -12.5,
+        "acc": -319.13
+      },
+      {
+        "date": "22/09",
+        "gross": -154,
+        "costs_irrf": 71,
+        "net": -225,
+        "acc": -544.13
+      },
+      {
+        "date": "23/09",
+        "gross": 229,
+        "costs_irrf": 34.46,
+        "net": 194.54,
+        "acc": -349.59
+      },
+      {
+        "date": "24/09",
+        "gross": 240,
+        "costs_irrf": 69.22,
+        "net": 170.78,
+        "acc": -178.81
+      },
+      {
+        "date": "25/09",
+        "gross": 144,
+        "costs_irrf": 3.42,
+        "net": 140.58,
+        "acc": -38.23
+      }
+    ]
+  }
+}

@@ -1,12 +1,12 @@
 {
   "updated_at": "26/09/2026",
   "cash": {
-    "personal": 209.84,
+    "personal": 329.84,
     "company_nubank": 194.49,
     "company_broker": 311.36,
     "company_total": 505.85,
-    "nubank_total": 404.33,
-    "total": 715.69
+    "nubank_total": 524.33,
+    "total": 835.69
   },
   "tax": {
     "fiscal_result": -30,
@@ -51,6 +51,12 @@
       "description": "Café da tarde",
       "amount": -35,
       "balance_after": 209.84
+    },
+    {
+      "date": "26/09",
+      "description": "Recebimento ARMAZÉM",
+      "amount": 120,
+      "balance_after": 329.84
     }
   ],
   "trading": {

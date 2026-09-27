@@ -1,12 +1,12 @@
 {
   "updated_at": "27/09/2026",
   "cash": {
-    "personal": 107.01,
+    "personal": 227.01,
     "company_nubank": 365.32,
     "company_broker": 140.58,
     "company_total": 505.90,
-    "nubank_total": 472.33,
-    "total": 612.91
+    "nubank_total": 592.33,
+    "total": 732.91
   },
   "tax": {
     "fiscal_result": -30.00,
@@ -25,7 +25,8 @@
     {"date":"26/09","description":"Farmácia Imperial","amount":-54.83,"balance_after":155.01},
     {"date":"26/09","description":"Cigarro / Posto Fórmula 1","amount":-12.00,"balance_after":143.01},
     {"date":"27/09","description":"Almoço","amount":-29.00,"balance_after":114.01},
-    {"date":"27/09","description":"Sorvete","amount":-7.00,"balance_after":107.01}
+    {"date":"27/09","description":"Recebimento ARMAZÉM","amount":120.00,"balance_after":234.01},
+    {"date":"27/09","description":"Sorvete","amount":-7.00,"balance_after":227.01}
   ],
   "trading": {
     "accumulated_net": -38.23,
